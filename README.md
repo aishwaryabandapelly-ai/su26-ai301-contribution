@@ -138,7 +138,82 @@ Next, I will look for or add a targeted unit test that verifies Chat Completions
 
 ## Phase III: Build & Test
 
-*To be completed in Phase III.*
+### Status
+
+Phase III Complete
+
+### Implementation Notes
+
+For Phase III, I implemented the planned fix for the Dynamo issue:
+
+**Issue:** [FEATURE]: Support reasoning tokens in response usage field
+**Issue Link:** https://github.com/ai-dynamo/dynamo/issues/2941
+
+The main file modified was:
+
+```text
+lib/llm/src/protocols/openai/chat_completions/delta.rs
+```
+
+During Phase II, I found that Chat Completions already copied `prompt_tokens` and `prompt_tokens_details` from backend-provided `completion_usage`, but it did not copy `completion_tokens_details`. This meant fields such as `reasoning_tokens` could be lost from the final OpenAI-compatible usage response.
+
+For Phase III, I updated the Chat Completions delta generator to propagate `completion_tokens_details` from backend usage metadata:
+
+```rust
+// Propagate completion token details if provided, including reasoning tokens.
+if let Some(completion_details) = completion_usage.completion_tokens_details.as_ref() {
+    self.usage.completion_tokens_details = Some(completion_details.clone());
+}
+```
+
+I also added a targeted unit test to verify that completion token details are preserved from backend usage:
+
+```text
+test_completion_token_details_are_propagated_from_backend_usage
+```
+
+### Code Changes
+
+Active development branch:
+
+```text
+https://github.com/aishwaryabandapelly-ai/dynamo/tree/phase2-reasoning-token-plan
+```
+
+Commits completed:
+
+```text
+fix: propagate chat completion token details
+test: cover chat completion token details propagation
+```
+
+### Testing Strategy
+
+I ran:
+
+```bash
+cargo fmt
+git diff --check
+```
+
+Both completed successfully.
+
+I also attempted:
+
+```bash
+cargo check -p dynamo-llm
+cargo test -p dynamo-llm test_completion_token_details_are_propagated_from_backend_usage --lib
+```
+
+Both commands progressed into the `dynamo-llm` crate but failed on macOS because of Linux-specific APIs related to NUMA, disk storage, `fallocate`, and `O_DIRECT`. This appears to be a local platform/environment limitation rather than an error caused by my code change.
+
+### Challenges Faced
+
+The main challenge was validating a large Rust-based AI infrastructure project on macOS. I installed Rust, Cargo, and protobuf, but full validation is limited because parts of Dynamo depend on Linux-only APIs. To keep the work scoped, I added a small fix following the existing pattern from the regular Completions API and added a targeted unit test for the Chat Completions path.
+
+### Next Steps
+
+My next step is to prepare for Phase IV by opening a pull request or draft pull request from my pushed branch, describing the implementation clearly, and responding to any maintainer feedback.
 
 ---
 
