@@ -217,6 +217,78 @@ My next step is to prepare for Phase IV by opening a pull request or draft pull 
 
 ---
 
-## Phase IV: Pull Request & Reflection
+## Phase IV: Submit & Iterate
 
-*To be completed in Phase IV.*
+### Status
+
+PR submitted / awaiting maintainer review
+
+### Pull Request
+
+**PR Title:** `fix(llm): propagate chat completion token details`
+**PR Link:** https://github.com/ai-dynamo/dynamo/pull/11027
+**Issue Link:** https://github.com/ai-dynamo/dynamo/issues/2941
+
+### Summary of Changes
+
+I opened a pull request against `ai-dynamo/dynamo` that makes the Chat Completions
+API propagate `completion_tokens_details` (including `reasoning_tokens`) from
+backend-provided usage metadata into the final OpenAI-compatible `usage` response.
+
+The change is in:
+
+```text
+lib/llm/src/protocols/openai/chat_completions/delta.rs
+```
+
+Previously, Chat Completions copied `prompt_tokens` and `prompt_tokens_details`
+from the backend `completion_usage` but did not copy `completion_tokens_details`,
+so fields such as `reasoning_tokens` were dropped from the response. The fix
+mirrors the pattern already used by the regular Completions API:
+
+```rust
+// Propagate completion token details if provided, including reasoning tokens.
+if let Some(completion_details) = completion_usage.completion_tokens_details.as_ref() {
+    self.usage.completion_tokens_details = Some(completion_details.clone());
+}
+```
+
+I also added a targeted unit test that feeds a backend `CompletionUsage` with
+`reasoning_tokens: Some(3)` through the delta generator and asserts the value is
+propagated to the response usage:
+
+```text
+test_completion_token_details_are_propagated_from_backend_usage
+```
+
+Before opening the PR, I rebased my branch onto the latest `upstream/main` so the
+change applies cleanly on top of current main.
+
+### Testing Notes
+
+I ran:
+
+```bash
+cargo fmt
+git diff --check
+```
+
+Both passed.
+
+I also attempted:
+
+```bash
+cargo check -p dynamo-llm
+cargo test -p dynamo-llm test_completion_token_details_are_propagated_from_backend_usage --lib
+```
+
+Both commands progressed into the `dynamo-llm` crate but could not complete on
+macOS because Dynamo depends on Linux-specific APIs (NUMA, `DiskStorage`,
+`fallocate`, and `O_DIRECT`). This is a local platform/environment limitation, not
+an error caused by my code change. The added unit test will be exercised by CI on
+Linux.
+
+### Next Steps
+
+Monitor the PR for CI results and maintainer review, and respond to any requested
+changes or feedback.
