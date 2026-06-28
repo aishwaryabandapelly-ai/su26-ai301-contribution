@@ -25,17 +25,19 @@ https://github.com/ai-dynamo/dynamo
 
 ### Problem Summary
 
-This issue is about adding support for reasoning token counts in Dynamo's OpenAI-compatible chat completion response usage field. Dynamo can separate reasoning output from normal assistant content, but the `usage.completion_token_details.reasoning_tokens` field is currently not populated. A successful fix would make this field show a non-zero reasoning token count when a reasoning model produces reasoning output.
+This issue is about adding support for reasoning token counts in Dynamo's OpenAI-compatible Chat Completions response usage field. Dynamo can separate reasoning output from normal assistant content, but the `usage.completion_tokens_details.reasoning_tokens` field was not being populated in the final response.
+
+A successful fix would make this field preserve and return the reasoning token count when the backend provides reasoning token usage metadata.
 
 ### Why I Chose This Issue
 
 I chose this issue because it is clearly scoped, labeled as a good first issue, and related to LLM inference observability. The issue is a good fit for the AI301 timeline because the expected behavior is specific: reasoning tokens should be counted and exposed in the response usage field.
 
-This issue also matches my interest in AI infrastructure and OpenAI-compatible APIs. It will help me learn how real open-source AI serving systems track token usage, handle reasoning parser output, and maintain Rust backend logic.
+This issue also matches my interest in AI infrastructure and OpenAI-compatible APIs. It helped me learn how real open-source AI serving systems track token usage, handle response metadata, and maintain Rust backend logic.
 
 ### Initial Plan
 
-In Phase II, I will set up the Dynamo repository locally, inspect the chat completion response generation code, reproduce the current missing reasoning token count behavior, and identify where completion usage is calculated. Then I will update the relevant Rust logic and add a test to verify that reasoning tokens are included in `completion_token_details.reasoning_tokens`.
+In Phase II, I planned to set up the Dynamo repository locally, inspect the Chat Completions response generation code, reproduce or investigate the missing reasoning token count behavior, and identify where completion usage is calculated. Then I planned to update the relevant Rust logic and add a test to verify that reasoning tokens are included in `completion_tokens_details.reasoning_tokens`.
 
 ---
 
@@ -96,13 +98,13 @@ and found that the regular Completions API already propagates `completion_tokens
 
 ### Planned Fix
 
-The planned fix is to update Chat Completions so that when the backend provides `completion_usage.completion_tokens_details`, Dynamo copies it into `self.usage.completion_tokens_details`.
+The planned fix was to update Chat Completions so that when the backend provides `completion_usage.completion_tokens_details`, Dynamo copies it into `self.usage.completion_tokens_details`.
 
-This should allow `completion_token_details.reasoning_tokens` to appear correctly in Chat Completions usage output.
+This should allow `completion_tokens_details.reasoning_tokens` to appear correctly in Chat Completions usage output.
 
 ### Code Change Drafted
 
-I added the following logic in `chat_completions/delta.rs`:
+I drafted the following logic in `chat_completions/delta.rs`:
 
 ```rust
 // Propagate completion token details if provided, including reasoning tokens.
@@ -132,7 +134,7 @@ The build progressed into the `dynamo-llm` crate but failed on macOS due to Linu
 
 ### Next Steps
 
-Next, I will look for or add a targeted unit test that verifies Chat Completions preserves `completion_tokens_details.reasoning_tokens`, then prepare the pull request.
+Next, I planned to add a targeted unit test that verifies Chat Completions preserves `completion_tokens_details.reasoning_tokens`, then prepare the pull request.
 
 ---
 
@@ -209,11 +211,11 @@ Both commands progressed into the `dynamo-llm` crate but failed on macOS because
 
 ### Challenges Faced
 
-The main challenge was validating a large Rust-based AI infrastructure project on macOS. I installed Rust, Cargo, and protobuf, but full validation is limited because parts of Dynamo depend on Linux-only APIs. To keep the work scoped, I added a small fix following the existing pattern from the regular Completions API and added a targeted unit test for the Chat Completions path.
+The main challenge was validating a large Rust-based AI infrastructure project on macOS. I installed Rust, Cargo, and protobuf, but full validation was limited because parts of Dynamo depend on Linux-only APIs. To keep the work scoped, I added a small fix following the existing pattern from the regular Completions API and added a targeted unit test for the Chat Completions path.
 
 ### Next Steps
 
-My next step is to prepare for Phase IV by opening a pull request or draft pull request from my pushed branch, describing the implementation clearly, and responding to any maintainer feedback.
+My next step was to prepare for Phase IV by opening a pull request from my pushed branch, describing the implementation clearly, and responding to any maintainer feedback.
 
 ---
 
@@ -229,11 +231,20 @@ PR submitted / awaiting maintainer review
 **PR Link:** https://github.com/ai-dynamo/dynamo/pull/11027
 **Issue Link:** https://github.com/ai-dynamo/dynamo/issues/2941
 
+### PR Description
+
+**What does this PR do?**
+This PR updates Dynamo's Chat Completions delta generator so that backend-provided `completion_tokens_details`, including `reasoning_tokens`, are propagated into the final OpenAI-compatible `usage` response.
+
+**Why was this PR needed?**
+Issue #2941 reported that reasoning token usage was not being surfaced in the response usage field. During investigation, I found that Chat Completions copied `prompt_tokens` and `prompt_tokens_details` from backend usage metadata, but did not copy `completion_tokens_details`. The regular Completions API already had this propagation pattern, so I mirrored that behavior in the Chat Completions path.
+
+**Relevant issue:**
+Closes #2941
+
 ### Summary of Changes
 
-I opened a pull request against `ai-dynamo/dynamo` that makes the Chat Completions
-API propagate `completion_tokens_details` (including `reasoning_tokens`) from
-backend-provided usage metadata into the final OpenAI-compatible `usage` response.
+I opened a pull request against `ai-dynamo/dynamo` that makes the Chat Completions API propagate `completion_tokens_details` from backend-provided usage metadata into the final OpenAI-compatible `usage` response.
 
 The change is in:
 
@@ -241,10 +252,7 @@ The change is in:
 lib/llm/src/protocols/openai/chat_completions/delta.rs
 ```
 
-Previously, Chat Completions copied `prompt_tokens` and `prompt_tokens_details`
-from the backend `completion_usage` but did not copy `completion_tokens_details`,
-so fields such as `reasoning_tokens` were dropped from the response. The fix
-mirrors the pattern already used by the regular Completions API:
+Previously, Chat Completions copied `prompt_tokens` and `prompt_tokens_details` from the backend `completion_usage` but did not copy `completion_tokens_details`, so fields such as `reasoning_tokens` were dropped from the response. The fix mirrors the pattern already used by the regular Completions API:
 
 ```rust
 // Propagate completion token details if provided, including reasoning tokens.
@@ -253,20 +261,17 @@ if let Some(completion_details) = completion_usage.completion_tokens_details.as_
 }
 ```
 
-I also added a targeted unit test that feeds a backend `CompletionUsage` with
-`reasoning_tokens: Some(3)` through the delta generator and asserts the value is
-propagated to the response usage:
+I also added a targeted unit test that feeds a backend `CompletionUsage` with `reasoning_tokens: Some(3)` through the delta generator and asserts the value is propagated to the response usage:
 
 ```text
 test_completion_token_details_are_propagated_from_backend_usage
 ```
 
-Before opening the PR, I rebased my branch onto the latest `upstream/main` so the
-change applies cleanly on top of current main.
+Before opening the PR, I rebased my branch onto the latest `upstream/main` so the change applies cleanly on top of current main.
 
 ### Testing Notes
 
-I ran:
+I ran locally:
 
 ```bash
 cargo fmt
@@ -275,20 +280,47 @@ git diff --check
 
 Both passed.
 
-I also attempted:
+I also attempted locally:
 
 ```bash
 cargo check -p dynamo-llm
 cargo test -p dynamo-llm test_completion_token_details_are_propagated_from_backend_usage --lib
 ```
 
-Both commands progressed into the `dynamo-llm` crate but could not complete on
-macOS because Dynamo depends on Linux-specific APIs (NUMA, `DiskStorage`,
-`fallocate`, and `O_DIRECT`). This is a local platform/environment limitation, not
-an error caused by my code change. The added unit test will be exercised by CI on
-Linux.
+Both commands progressed into the `dynamo-llm` crate but could not complete on macOS because Dynamo depends on Linux-specific APIs such as NUMA, `DiskStorage`, `fallocate`, and `O_DIRECT`. This is a local platform/environment limitation, not an error caused by my code change.
+
+After the PR was opened, Linux CI validated the code path. Rust tests and Rust clippy passed on CI. Some remaining CI issues appear related to fork permissions or repository-wide infrastructure checks, not to this code change.
+
+### Acceptance Criteria
+
+* [x] Tests added for changed behavior
+* [x] Relevant Rust tests passed on Linux CI
+* [x] Rust clippy passed on Linux CI
+* [x] Follows existing code style and mirrors the existing `prompt_tokens_details` propagation pattern
+* [x] No unrelated files changed
+* [x] No breaking changes introduced
+* [x] Documentation update not applicable because this is a small backend usage-field fix
+
+### Maintainer Feedback
+
+No human maintainer feedback has been received yet. The PR is currently open and awaiting maintainer review.
+
+CodeRabbit reviewed the PR and did not leave any actionable inline comments. The PR title check passed, DCO passed, Rust tests passed, and Rust clippy passed. Remaining CI failures appear related to fork permissions and repository-wide external link or infrastructure checks rather than the code change itself.
+
+If maintainers request changes, I will update the branch with follow-up commits and respond clearly to each review comment.
 
 ### Next Steps
 
-Monitor the PR for CI results and maintainer review, and respond to any requested
-changes or feedback.
+Monitor the PR for maintainer feedback and CI updates. If no maintainer review is received after several business days, I may leave a polite follow-up comment asking whether anything else is needed to move the PR forward.
+
+---
+
+## Learnings & Reflections
+
+The biggest lesson from this contribution was learning how to trace an existing behavior pattern in a large open-source codebase and apply it consistently. Comparing the Chat Completions implementation with the regular Completions implementation helped me identify the missing `completion_tokens_details` propagation.
+
+I also learned more about the real open-source workflow: choosing a scoped issue, investigating the relevant code path, making a minimal fix, adding a targeted test, rebasing on upstream main, force-pushing safely with `--force-with-lease`, and documenting testing limitations clearly.
+
+Another important learning was understanding how CI behavior can differ between local development and upstream Linux environments. My macOS setup could not complete some checks because Dynamo uses Linux-specific APIs, but the PR's Linux CI helped validate the actual Rust code path.
+
+This phase helped me understand that a good open-source PR is not only about writing code. It is also about keeping the diff small, explaining the reasoning clearly, respecting the project's PR template, and being ready to respond professionally to maintainer feedback.
