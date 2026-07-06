@@ -326,3 +326,53 @@ I also learned more about the real open-source workflow: choosing a scoped issue
 Another important learning was understanding how CI behavior can differ between local development and upstream Linux environments. My macOS setup could not complete some checks because Dynamo uses Linux-specific APIs, but the PR's Linux CI helped validate the actual Rust code path.
 
 This phase helped me understand that a good open-source PR is not only about writing code. It is also about keeping the diff small, explaining the reasoning clearly, respecting the project's PR template, and being ready to respond professionally to maintainer feedback.
+
+## Cycle 2 Open Source Contribution — vllm-omni
+
+### Repository
+- Upstream repository: https://github.com/vllm-project/vllm-omni
+- My fork: https://github.com/aishwaryabandapelly-ai/vllm-omni
+
+### Selected Issue
+- Issue: https://github.com/vllm-project/vllm-omni/issues/2462
+- Title: [New Model]: LongCat-AudioDiT (Meituan) — Waveform Latent Space Diffusion TTS
+
+### Current Status
+I selected this issue as my second open-source contribution and commented on the issue to express interest in working on it.
+
+I forked the repository, cloned it locally, added the upstream remote, and created a new investigation branch:
+
+`cycle2-longcat-audiodit-investigation`
+
+### Investigation Completed So Far
+I started by exploring how `vllm-omni` supports existing TTS and audio/diffusion models. The closest existing references I found are:
+
+- `qwen3_tts` — TTS pipeline structure
+- `cosyvoice3` — Talker → Code2Wav pipeline with DiT / flow-matching decoder
+- `stable_audio` — audio diffusion model pattern
+- `longcat_image` — existing LongCat diffusion model naming and pipeline pattern
+
+Important files identified:
+
+- `vllm_omni/config/pipeline_registry.py`
+- `vllm_omni/model_executor/models/registry.py`
+- `vllm_omni/model_executor/models/qwen3_tts/pipeline.py`
+- `vllm_omni/model_executor/models/cosyvoice3/pipeline.py`
+- `vllm_omni/diffusion/models/stable_audio/`
+- `vllm_omni/diffusion/models/longcat_image/`
+- `docs/contributing/model/adding_tts_model.md`
+
+### Initial Understanding
+LongCat-AudioDiT appears to be larger than a simple one-file change because it is a waveform latent-space diffusion TTS model. Based on the repository’s TTS contribution guide, the correct next step is to study the official LongCat-AudioDiT reference implementation before making code changes.
+
+### Next Steps
+- Clone and inspect the official LongCat-AudioDiT reference repository
+- Identify its model components, config structure, scheduler, audio/VAE flow, and inference path
+- Compare it with existing `vllm-omni` patterns
+- Decide the smallest safe PR scope, likely either:
+  - documentation/investigation notes,
+  - model registration/pipeline skeleton,
+  - or a scoped first implementation step
+
+### Notes
+No code changes have been made yet. I am intentionally doing investigation first to avoid making an incomplete or incorrect model integration.
