@@ -2,8 +2,8 @@
 
 ## Student Information
 
-Name: Aishwarya B
-Course: AI301 Open Source Capstone
+Name: Aishwarya B  
+Course: AI301 Open Source Capstone  
 Program: CodePath Summer 2026
 
 ---
@@ -16,7 +16,7 @@ Phase I Complete
 
 ### Chosen Issue
 
-[FEATURE]: Support reasoning tokens in response usage field
+[FEATURE]: Support reasoning tokens in response usage field  
 https://github.com/ai-dynamo/dynamo/issues/2941
 
 ### Project Repository
@@ -67,7 +67,7 @@ cargo --version
 
 ### Issue
 
-[FEATURE]: Support reasoning tokens in response usage field
+[FEATURE]: Support reasoning tokens in response usage field  
 https://github.com/ai-dynamo/dynamo/issues/2941
 
 ### Reproduction / Investigation
@@ -148,7 +148,7 @@ Phase III Complete
 
 For Phase III, I implemented the planned fix for the Dynamo issue:
 
-**Issue:** [FEATURE]: Support reasoning tokens in response usage field
+**Issue:** [FEATURE]: Support reasoning tokens in response usage field  
 **Issue Link:** https://github.com/ai-dynamo/dynamo/issues/2941
 
 The main file modified was:
@@ -189,6 +189,13 @@ fix: propagate chat completion token details
 test: cover chat completion token details propagation
 ```
 
+Latest signed commit hashes after fixing the GPG signing requirement:
+
+```text
+3ffcd85 fix: propagate chat completion token details
+f0c5b15 test: cover chat completion token details propagation
+```
+
 ### Testing Strategy
 
 I ran:
@@ -213,6 +220,8 @@ Both commands progressed into the `dynamo-llm` crate but failed on macOS because
 
 The main challenge was validating a large Rust-based AI infrastructure project on macOS. I installed Rust, Cargo, and protobuf, but full validation was limited because parts of Dynamo depend on Linux-only APIs. To keep the work scoped, I added a small fix following the existing pattern from the regular Completions API and added a targeted unit test for the Chat Completions path.
 
+Another challenge was learning how to handle open-source CI requirements for external contributors. After the PR was opened, Dynamo required my commits to be GPG-signed before some CI workflows could run. I installed GPG, created a GPG key, added the public key to GitHub, configured Git commit signing, signed both commits, rebased onto the latest upstream main, and force-pushed safely with `--force-with-lease`.
+
 ### Next Steps
 
 My next step was to prepare for Phase IV by opening a pull request from my pushed branch, describing the implementation clearly, and responding to any maintainer feedback.
@@ -223,23 +232,26 @@ My next step was to prepare for Phase IV by opening a pull request from my pushe
 
 ### Status
 
-PR submitted / automated review approved / awaiting human code-owner review
+PR submitted / GPG signing blocker fixed / CI running / awaiting human code-owner review
 
 ### Pull Request
 
-**PR Title:** `fix(llm): propagate chat completion token details`
-**PR Link:** https://github.com/ai-dynamo/dynamo/pull/11027
+**PR Title:** `fix(llm): propagate chat completion token details`  
+**PR Link:** https://github.com/ai-dynamo/dynamo/pull/11027  
 **Issue Link:** https://github.com/ai-dynamo/dynamo/issues/2941
 
 ### PR Description
 
 **What does this PR do?**
+
 This PR updates Dynamo's Chat Completions delta generator so that backend-provided `completion_tokens_details`, including `reasoning_tokens`, are propagated into the final OpenAI-compatible `usage` response.
 
 **Why was this PR needed?**
+
 Issue #2941 reported that reasoning token usage was not being surfaced in the response usage field. During investigation, I found that Chat Completions copied `prompt_tokens` and `prompt_tokens_details` from backend usage metadata, but did not copy `completion_tokens_details`. The regular Completions API already had this propagation pattern, so I mirrored that behavior in the Chat Completions path.
 
 **Relevant issue:**
+
 Closes #2941
 
 ### Summary of Changes
@@ -269,6 +281,8 @@ test_completion_token_details_are_propagated_from_backend_usage
 
 Before opening the PR, I rebased my branch onto the latest `upstream/main` so the change applies cleanly on top of current main.
 
+After a CI bot detected that my commits were unsigned, I created a GPG key, added it to GitHub, signed both commits, rebased onto the latest upstream main again, and force-pushed the signed commits. The unsigned commit warning is now resolved.
+
 ### Testing Notes
 
 I ran locally:
@@ -289,31 +303,47 @@ cargo test -p dynamo-llm test_completion_token_details_are_propagated_from_backe
 
 Both commands progressed into the `dynamo-llm` crate but could not complete on macOS because Dynamo depends on Linux-specific APIs such as NUMA, `DiskStorage`, `fallocate`, and `O_DIRECT`. This is a local platform/environment limitation, not an error caused by my code change.
 
-After the PR was opened, Linux CI validated the code path. Rust tests and Rust clippy passed on CI. Some remaining CI issues appear related to fork permissions or repository-wide infrastructure checks, not to this code change.
+After the PR was opened, Linux CI validated the code path. Rust tests and Rust clippy passed on CI before the branch was updated for GPG signing. After I signed the commits and force-pushed, CI started running again.
 
 ### Acceptance Criteria
 
 * [x] Tests added for changed behavior
-* [x] Relevant Rust tests passed on Linux CI
-* [x] Rust clippy passed on Linux CI
-* [x] Follows existing code style and mirrors the existing `prompt_tokens_details` propagation pattern
+* [x] Rust code formatted
 * [x] No unrelated files changed
 * [x] No breaking changes introduced
+* [x] Follows existing code style and mirrors the existing `prompt_tokens_details` propagation pattern
+* [x] Commits are GPG-signed after CI requested signed commits
 * [x] Documentation update not applicable because this is a small backend usage-field fix
+* [ ] Final CI completion after signed commit push
+* [ ] Human code-owner review
 
 ### Maintainer Feedback
 
-No human maintainer feedback has been received yet. The PR is currently open and awaiting human code-owner / maintainer review.
+No human maintainer feedback requiring code changes has been received yet. The PR is currently open and awaiting human code-owner / maintainer review.
 
-Automated review status is positive. CodeRabbit reviewed the PR and did not leave any actionable inline comments. The dynamo-review-agent also approved the changes. Rust tests and Rust clippy passed on Linux CI, which helped validate the code path that I could not fully test locally on macOS.
+Automated review status has been positive. CodeRabbit reviewed the PR and summarized the change as a small/trivial update. The dynamo-review-agent approved the changes, and Devin Review reported no issues.
 
-Remaining checks appear to be related to external-contributor infrastructure or repository-wide validation rather than the code change itself. The copy-pr-bot indicated that additional NVIDIA validation is required before some workflows can run on NVIDIA runners. The Docs link check / lychee failure appears unrelated because this PR only changes the Chat Completions Rust implementation file and does not modify documentation.
+A Dynamo bot later detected that the original commits were not GPG-signed. I addressed this by:
 
-GitHub still requires review from a code owner with write access before the PR can be merged. If maintainers request changes, I will update the branch with follow-up commits and respond clearly to each review comment.
+```text
+1. Installing GPG and pinentry-mac
+2. Creating a GPG key
+3. Adding the public GPG key to GitHub
+4. Configuring Git to sign commits
+5. Signing both PR commits
+6. Rebasing onto latest upstream/main
+7. Force-pushing the signed commits with --force-with-lease
+```
+
+After this, the unsigned-commit warning disappeared and GitHub Actions started running again.
+
+The PR is currently blocked by required CI checks still completing and by required code-owner review. The current GitHub merge message says that code-owner review is required before the PR can be merged.
+
+If maintainers request changes, I will update the branch with follow-up commits and respond clearly to each review comment.
 
 ### Next Steps
 
-Monitor the PR for maintainer feedback and CI updates. If no maintainer review is received after several business days, I may leave a polite follow-up comment asking whether anything else is needed to move the PR forward.
+Monitor the PR for CI updates and maintainer feedback. I will not push again or update the branch unless a maintainer requests it. If no maintainer review is received after several business days, I may leave a polite follow-up comment asking whether anything else is needed to move the PR forward.
 
 ---
 
@@ -325,26 +355,36 @@ I also learned more about the real open-source workflow: choosing a scoped issue
 
 Another important learning was understanding how CI behavior can differ between local development and upstream Linux environments. My macOS setup could not complete some checks because Dynamo uses Linux-specific APIs, but the PR's Linux CI helped validate the actual Rust code path.
 
-This phase helped me understand that a good open-source PR is not only about writing code. It is also about keeping the diff small, explaining the reasoning clearly, respecting the project's PR template, and being ready to respond professionally to maintainer feedback.
+I also learned how signed commits work in open-source repositories. Dynamo required my commits to be GPG-signed before CI could fully run. I created and configured a GPG key, added it to GitHub, signed my commits, and force-pushed the corrected branch. This helped me understand an important part of contributor security and verification in professional open-source workflows.
+
+This phase helped me understand that a good open-source PR is not only about writing code. It is also about keeping the diff small, explaining the reasoning clearly, respecting the project's PR template, handling CI requirements carefully, and being ready to respond professionally to maintainer feedback.
+
+---
 
 ## Cycle 2 Open Source Contribution — vllm-omni
 
 ### Repository
+
 - Upstream repository: https://github.com/vllm-project/vllm-omni
 - My fork: https://github.com/aishwaryabandapelly-ai/vllm-omni
 
 ### Selected Issue
+
 - Issue: https://github.com/vllm-project/vllm-omni/issues/2462
 - Title: [New Model]: LongCat-AudioDiT (Meituan) — Waveform Latent Space Diffusion TTS
 
 ### Current Status
+
 I selected this issue as my second open-source contribution and commented on the issue to express interest in working on it.
 
 I forked the repository, cloned it locally, added the upstream remote, and created a new investigation branch:
 
-`cycle2-longcat-audiodit-investigation`
+```text
+cycle2-longcat-audiodit-investigation
+```
 
 ### Investigation Completed So Far
+
 I started by exploring how `vllm-omni` supports existing TTS and audio/diffusion models. The closest existing references I found are:
 
 - `qwen3_tts` — TTS pipeline structure
@@ -363,9 +403,13 @@ Important files identified:
 - `docs/contributing/model/adding_tts_model.md`
 
 ### Initial Understanding
+
 LongCat-AudioDiT appears to be larger than a simple one-file change because it is a waveform latent-space diffusion TTS model. Based on the repository’s TTS contribution guide, the correct next step is to study the official LongCat-AudioDiT reference implementation before making code changes.
 
+The actual goal of the issue is to add support for LongCat-AudioDiT inside `vllm-omni`, so users can run it as a text-to-speech model. This likely requires understanding how LongCat-AudioDiT handles text input, reference audio or voice cloning, Wav-VAE encoding/decoding, diffusion sampling, scheduler behavior, and final audio output.
+
 ### Next Steps
+
 - Clone and inspect the official LongCat-AudioDiT reference repository
 - Identify its model components, config structure, scheduler, audio/VAE flow, and inference path
 - Compare it with existing `vllm-omni` patterns
@@ -375,4 +419,7 @@ LongCat-AudioDiT appears to be larger than a simple one-file change because it i
   - or a scoped first implementation step
 
 ### Notes
-No code changes have been made yet. I am intentionally doing investigation first to avoid making an incomplete or incorrect model integration.
+
+No code changes have been made yet for Cycle 2. I am intentionally doing investigation first to avoid making an incomplete or incorrect model integration.
+
+The first Dynamo PR remains my completed primary contribution, while the vllm-omni issue is my second-cycle investigation and planning work.
