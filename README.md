@@ -232,7 +232,7 @@ My next step was to prepare for Phase IV by opening a pull request from my pushe
 
 ### Status
 
-PR submitted / GPG signing blocker fixed / CI running / awaiting human code-owner review
+PR merged
 
 ### Pull Request
 
@@ -281,7 +281,9 @@ test_completion_token_details_are_propagated_from_backend_usage
 
 Before opening the PR, I rebased my branch onto the latest `upstream/main` so the change applies cleanly on top of current main.
 
-After a CI bot detected that my commits were unsigned, I created a GPG key, added it to GitHub, signed both commits, rebased onto the latest upstream main again, and force-pushed the signed commits. The unsigned commit warning is now resolved.
+After a CI bot detected that my commits were unsigned, I created a GPG key, added it to GitHub, signed both commits, rebased onto the latest upstream main again, and force-pushed the signed commits. The unsigned commit warning was resolved and GitHub Actions started running again.
+
+The PR was later merged, completing my first open-source contribution for AI301.
 
 ### Testing Notes
 
@@ -305,6 +307,8 @@ Both commands progressed into the `dynamo-llm` crate but could not complete on m
 
 After the PR was opened, Linux CI validated the code path. Rust tests and Rust clippy passed on CI before the branch was updated for GPG signing. After I signed the commits and force-pushed, CI started running again.
 
+The PR was eventually accepted and merged upstream.
+
 ### Acceptance Criteria
 
 * [x] Tests added for changed behavior
@@ -314,16 +318,15 @@ After the PR was opened, Linux CI validated the code path. Rust tests and Rust c
 * [x] Follows existing code style and mirrors the existing `prompt_tokens_details` propagation pattern
 * [x] Commits are GPG-signed after CI requested signed commits
 * [x] Documentation update not applicable because this is a small backend usage-field fix
-* [ ] Final CI completion after signed commit push
-* [ ] Human code-owner review
+* [x] Final CI completed successfully
+* [x] Human maintainer / code-owner review completed
+* [x] PR merged
 
 ### Maintainer Feedback
 
-No human maintainer feedback requiring code changes has been received yet. The PR is currently open and awaiting human code-owner / maintainer review.
+No major human maintainer feedback requiring code changes was received on the implementation itself. Automated review status was positive. CodeRabbit reviewed the PR and summarized the change as a small/trivial update. The dynamo-review-agent approved the changes, and Devin Review reported no issues.
 
-Automated review status has been positive. CodeRabbit reviewed the PR and summarized the change as a small/trivial update. The dynamo-review-agent approved the changes, and Devin Review reported no issues.
-
-A Dynamo bot later detected that the original commits were not GPG-signed. I addressed this by:
+A Dynamo bot detected that the original commits were not GPG-signed. I addressed this by:
 
 ```text
 1. Installing GPG and pinentry-mac
@@ -337,13 +340,13 @@ A Dynamo bot later detected that the original commits were not GPG-signed. I add
 
 After this, the unsigned-commit warning disappeared and GitHub Actions started running again.
 
-The PR is currently blocked by required CI checks still completing and by required code-owner review. The current GitHub merge message says that code-owner review is required before the PR can be merged.
+The PR was later merged, which means the required project checks and review process were completed successfully.
 
-If maintainers request changes, I will update the branch with follow-up commits and respond clearly to each review comment.
+### Final Outcome
 
-### Next Steps
+My first AI301 open-source contribution was successfully merged into the upstream Dynamo repository.
 
-Monitor the PR for CI updates and maintainer feedback. I will not push again or update the branch unless a maintainer requests it. If no maintainer review is received after several business days, I may leave a polite follow-up comment asking whether anything else is needed to move the PR forward.
+This contribution fixed missing propagation of `completion_tokens_details` in Dynamo's Chat Completions usage response, allowing reasoning token details from backend usage metadata to be preserved in the final OpenAI-compatible response.
 
 ---
 
@@ -359,67 +362,177 @@ I also learned how signed commits work in open-source repositories. Dynamo requi
 
 This phase helped me understand that a good open-source PR is not only about writing code. It is also about keeping the diff small, explaining the reasoning clearly, respecting the project's PR template, handling CI requirements carefully, and being ready to respond professionally to maintainer feedback.
 
+Most importantly, this contribution taught me that getting a PR merged requires both technical correctness and professional collaboration. The final merge gave me confidence that I can contribute to real AI infrastructure projects.
+
 ---
 
-## Cycle 2 Open Source Contribution — vllm-omni
+## Cycle 2 Open Source Contribution — Investigation and Issue Re-selection
+
+### Current Status
+
+For my second open-source contribution cycle, I first selected a `vllm-omni` issue related to LongCat-AudioDiT support. After investigation, I found that another pull request was already actively tracking the same model support work. Because of that, I decided not to open a duplicate PR and instead started looking for a different issue with a cleaner contribution path.
+
+I have now identified a third issue and left a comment expressing interest in working on it.
+
+---
+
+## Cycle 2 Attempt 1 — vllm-omni LongCat-AudioDiT Investigation
 
 ### Repository
 
 - Upstream repository: https://github.com/vllm-project/vllm-omni
 - My fork: https://github.com/aishwaryabandapelly-ai/vllm-omni
 
-### Selected Issue
+### Issue Investigated
 
 - Issue: https://github.com/vllm-project/vllm-omni/issues/2462
 - Title: [New Model]: LongCat-AudioDiT (Meituan) — Waveform Latent Space Diffusion TTS
 
-### Current Status
+### Work Completed
 
-I selected this issue as my second open-source contribution and commented on the issue to express interest in working on it.
+I selected this issue as my second open-source contribution candidate and commented on the issue to express interest in working on it.
 
-I forked the repository, cloned it locally, added the upstream remote, and created a new investigation branch:
+I forked the repository, cloned it locally, added the upstream remote, and created an investigation branch:
 
 ```text
 cycle2-longcat-audiodit-investigation
 ```
 
-### Investigation Completed So Far
-
-I started by exploring how `vllm-omni` supports existing TTS and audio/diffusion models. The closest existing references I found are:
+I explored how `vllm-omni` supports existing TTS and audio/diffusion models. The closest references I found were:
 
 - `qwen3_tts` — TTS pipeline structure
 - `cosyvoice3` — Talker → Code2Wav pipeline with DiT / flow-matching decoder
 - `stable_audio` — audio diffusion model pattern
 - `longcat_image` — existing LongCat diffusion model naming and pipeline pattern
 
-Important files identified:
+Important files investigated:
 
-- `vllm_omni/config/pipeline_registry.py`
-- `vllm_omni/model_executor/models/registry.py`
-- `vllm_omni/model_executor/models/qwen3_tts/pipeline.py`
-- `vllm_omni/model_executor/models/cosyvoice3/pipeline.py`
-- `vllm_omni/diffusion/models/stable_audio/`
-- `vllm_omni/diffusion/models/longcat_image/`
-- `docs/contributing/model/adding_tts_model.md`
+```text
+vllm_omni/config/pipeline_registry.py
+vllm_omni/model_executor/models/registry.py
+vllm_omni/model_executor/models/qwen3_tts/pipeline.py
+vllm_omni/model_executor/models/cosyvoice3/pipeline.py
+vllm_omni/diffusion/models/stable_audio/
+vllm_omni/diffusion/models/longcat_image/
+docs/contributing/model/adding_tts_model.md
+```
 
-### Initial Understanding
+I also inspected the official LongCat-AudioDiT reference implementation to understand the model structure. From that investigation, I learned that LongCat-AudioDiT is not a simple TTS model integration. It is a waveform latent-space diffusion TTS model involving:
 
-LongCat-AudioDiT appears to be larger than a simple one-file change because it is a waveform latent-space diffusion TTS model. Based on the repository’s TTS contribution guide, the correct next step is to study the official LongCat-AudioDiT reference implementation before making code changes.
+- UMT5 text encoder
+- AudioDiT diffusion transformer
+- Wav-VAE encoder/decoder
+- CFG/APG guidance
+- duration and latent-hop handling
+- optional prompt audio / voice cloning flow
+- final waveform generation at 24 kHz
 
-The actual goal of the issue is to add support for LongCat-AudioDiT inside `vllm-omni`, so users can run it as a text-to-speech model. This likely requires understanding how LongCat-AudioDiT handles text input, reference audio or voice cloning, Wav-VAE encoding/decoding, diffusion sampling, scheduler behavior, and final audio output.
+### Local Groundwork Attempt
 
-### Next Steps
+To understand the smallest possible contribution, I created a small local implementation branch:
 
-- Clone and inspect the official LongCat-AudioDiT reference repository
-- Identify its model components, config structure, scheduler, audio/VAE flow, and inference path
-- Compare it with existing `vllm-omni` patterns
-- Decide the smallest safe PR scope, likely either:
-  - documentation/investigation notes,
-  - model registration/pipeline skeleton,
-  - or a scoped first implementation step
+```text
+feat-audiodit-config-registration
+```
 
-### Notes
+On that branch, I added local groundwork for HuggingFace-style config recognition:
 
-No code changes have been made yet for Cycle 2. I am intentionally doing investigation first to avoid making an incomplete or incorrect model integration.
+- `AudioDiTConfig`
+- `AudioDiTVaeConfig`
+- `AutoConfig.register("audiodit", AudioDiTConfig)`
+- `AutoConfig.register("audiodit_vae", AudioDiTVaeConfig)`
+- config exposure through `vllm_omni.transformers_utils.configs`
+- a unit test for config defaults, nested config conversion, and AutoConfig registration
 
-The first Dynamo PR remains my completed primary contribution, while the vllm-omni issue is my second-cycle investigation and planning work.
+I also created a signed local commit:
+
+```text
+feat: add AudioDiT config registration
+```
+
+During validation, I learned that running full pytest locally was blocked because the repository’s shared pytest fixtures import `torch`, which was not installed in my lightweight local environment. I created a Python 3.12 virtual environment using `uv` because the project requires Python `>=3.10, <3.14`, while my system Python versions were either too new or too old.
+
+I successfully ran lightweight validation:
+
+```bash
+PYTHONPATH=. python -m py_compile \
+  vllm_omni/transformers_utils/configs/audiodit.py \
+  vllm_omni/transformers_utils/configs/__init__.py \
+  tests/unit/audiodit/test_audiodit_config.py
+```
+
+I also directly validated config construction and `AutoConfig.for_model()` registration locally.
+
+### Why I Did Not Open a PR
+
+Before opening the PR, I checked the issue discussion more carefully and found that LongCat-AudioDiT support was already being tracked in an existing PR:
+
+```text
+https://github.com/vllm-project/vllm-omni/pull/2387
+```
+
+That PR already included broader LongCat-AudioDiT model support, including transformer and pipeline work, and it was linked to the same issue. Because of that, opening my config-only PR would likely be a duplicate or create conflicts with ongoing maintainer work.
+
+I decided not to open a pull request for my local branch. This was an important open-source workflow lesson: even if the code works locally, it is better to avoid duplicate PRs when an existing PR already covers the same feature.
+
+### What I Learned From This Attempt
+
+This investigation still helped me learn a lot:
+
+- How `vllm-omni` organizes model pipelines
+- How TTS models are staged in the repository
+- How custom model configs are registered through `transformers_utils/configs`
+- How `AutoConfig.register()` works for unsupported HuggingFace model types
+- How to inspect an official reference implementation before coding
+- How to avoid duplicate PRs by checking linked PRs and maintainer comments
+- How local validation can be limited by large ML repository dependencies
+- Why small config work can still overlap with a larger model integration PR
+
+Even though I did not submit this PR, the investigation improved my ability to read large AI infrastructure repositories and helped me choose a better next issue.
+
+---
+
+## Cycle 2 Attempt 2 — New Issue Selected
+
+### Repository
+
+- Upstream repository: https://github.com/open-telemetry/weaver
+
+### Issue Selected
+
+- Issue: https://github.com/open-telemetry/weaver/issues/791
+- Title: Increase build performance
+
+### Why I Chose This Issue
+
+After deciding not to open a duplicate PR for the `vllm-omni` LongCat-AudioDiT issue, I looked for a cleaner issue with:
+
+- recent activity
+- no obvious active PR already solving it
+- a clear improvement goal
+- a smaller contribution surface
+- a `good first issue` label
+
+The OpenTelemetry Weaver issue is about improving CI build performance by adding Docker cache support and potentially Rust crate caching. This is a better fit for a scoped contribution because it focuses on GitHub Actions / CI optimization rather than a large model integration.
+
+### Comment Left
+
+I left a comment on the issue expressing interest in working on it. My plan is to first review the existing GitHub Actions workflows, compare them with the Docker cache example linked in the issue, and identify the smallest safe improvement.
+
+### Planned Next Steps
+
+- Clone and inspect the `open-telemetry/weaver` repository
+- Review the existing GitHub Actions workflow files
+- Identify where Docker image builds happen
+- Compare the current workflow with the linked Docker cache example
+- Decide whether the smallest safe PR should add:
+  - Docker build cache support,
+  - Rust crate cache support,
+  - or only one of them first
+- Avoid making workflow changes until I understand the current CI structure clearly
+
+### Current Cycle 2 Status
+
+The `vllm-omni` issue remains documented as an investigation attempt, but I am moving forward with the OpenTelemetry Weaver build-performance issue as the next active contribution candidate.
+
+The first Dynamo PR is now merged and remains my completed primary contribution, while the OpenTelemetry Weaver issue is now my active second-cycle target.
