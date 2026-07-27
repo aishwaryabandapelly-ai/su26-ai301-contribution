@@ -372,7 +372,7 @@ Most importantly, this contribution taught me that getting a PR merged requires 
 
 For my second open-source contribution cycle, I first selected a `vllm-omni` issue related to LongCat-AudioDiT support. After investigation, I found that another pull request was already actively tracking the same model support work. Because of that, I decided not to open a duplicate PR and instead started looking for a different issue with a cleaner contribution path.
 
-I have now identified a third issue and left a comment expressing interest in working on it.
+I then selected an OpenTelemetry Weaver issue related to CI build performance, commented on the issue, implemented a scoped Docker cache improvement, and opened a pull request.
 
 ---
 
@@ -492,11 +492,12 @@ Even though I did not submit this PR, the investigation improved my ability to r
 
 ---
 
-## Cycle 2 Attempt 2 — New Issue Selected
+## Cycle 2 Attempt 2 — OpenTelemetry Weaver Build Performance
 
 ### Repository
 
 - Upstream repository: https://github.com/open-telemetry/weaver
+- My fork: https://github.com/aishwaryabandapelly-ai/weaver
 
 ### Issue Selected
 
@@ -513,26 +514,155 @@ After deciding not to open a duplicate PR for the `vllm-omni` LongCat-AudioDiT i
 - a smaller contribution surface
 - a `good first issue` label
 
-The OpenTelemetry Weaver issue is about improving CI build performance by adding Docker cache support and potentially Rust crate caching. This is a better fit for a scoped contribution because it focuses on GitHub Actions / CI optimization rather than a large model integration.
+The OpenTelemetry Weaver issue is about improving CI build performance by using Docker cache and potentially Rust crate cache. This was a better fit for a scoped contribution because it focused on GitHub Actions / CI optimization rather than a large model integration.
 
 ### Comment Left
 
-I left a comment on the issue expressing interest in working on it. My plan is to first review the existing GitHub Actions workflows, compare them with the Docker cache example linked in the issue, and identify the smallest safe improvement.
+I left a comment on the issue expressing interest in working on it. My plan was to first review the existing GitHub Actions workflows, compare them with the Docker cache example linked in the issue, and identify the smallest safe improvement before opening a PR.
 
-### Planned Next Steps
+### Local Setup
 
-- Clone and inspect the `open-telemetry/weaver` repository
-- Review the existing GitHub Actions workflow files
-- Identify where Docker image builds happen
-- Compare the current workflow with the linked Docker cache example
-- Decide whether the smallest safe PR should add:
-  - Docker build cache support,
-  - Rust crate cache support,
-  - or only one of them first
-- Avoid making workflow changes until I understand the current CI structure clearly
+I forked the repository, cloned it locally, added the upstream remote, and created a new branch:
+
+```bash
+cd ~/Desktop/project
+git clone https://github.com/aishwaryabandapelly-ai/weaver.git
+cd weaver
+git remote add upstream https://github.com/open-telemetry/weaver.git
+git fetch upstream
+git checkout -b cycle2-build-performance
+```
+
+The working tree was clean before I started making changes.
+
+### Investigation
+
+I inspected the repository’s GitHub Actions workflows and found the Docker publishing workflow:
+
+```text
+.github/workflows/publish-docker.yml
+```
+
+I found that this workflow already used:
+
+```text
+docker/setup-buildx-action
+docker/build-push-action
+```
+
+but it did not include Docker BuildKit cache settings such as:
+
+```text
+cache-from
+cache-to
+```
+
+I also noticed that many Rust workflows already used `Swatinem/rust-cache`, so I decided to keep this first PR focused on Docker build caching only. This matched the issue’s request while keeping the contribution small and safe.
+
+### Pull Request Opened
+
+- PR: https://github.com/open-telemetry/weaver/pull/1647
+- PR Title: `ci: add Docker build cache`
+- Issue: https://github.com/open-telemetry/weaver/issues/791
+- Status: PR opened / CLA signed / waiting for maintainer workflow approval, CI, and review
+
+### Summary of Changes
+
+I opened a pull request that adds GitHub Actions BuildKit cache support to the Docker build steps in:
+
+```text
+.github/workflows/publish-docker.yml
+```
+
+The workflow builds Docker images for two platforms:
+
+```text
+linux/amd64
+linux/arm64
+```
+
+To keep caches separated by platform, I added a `cache-scope` value to each Docker build matrix entry:
+
+```yaml
+- platform: linux/amd64
+  runner: ubuntu-latest
+  cache-scope: linux-amd64
+
+- platform: linux/arm64
+  runner: ubuntu-24.04-arm
+  cache-scope: linux-arm64
+```
+
+Then I added BuildKit GitHub Actions cache settings to the existing Docker build steps:
+
+```yaml
+cache-from: type=gha,scope=weaver-docker-${{ matrix.cache-scope }}
+cache-to: type=gha,mode=max,scope=weaver-docker-${{ matrix.cache-scope }}
+```
+
+This change should allow Docker layers to be reused across workflow runs, improving build performance for the Docker image build process.
+
+### Code Changes
+
+Active development branch:
+
+```text
+https://github.com/aishwaryabandapelly-ai/weaver/tree/cycle2-build-performance
+```
+
+Commit completed:
+
+```text
+e3fb8dd3 ci: add Docker build cache
+```
+
+The commit was GPG-signed successfully before pushing.
+
+### Testing
+
+I ran:
+
+```bash
+git diff --check
+```
+
+This passed successfully.
+
+Because this is a GitHub Actions workflow-only change, the actual Docker cache behavior must be validated by GitHub Actions when the PR workflows run.
+
+### CLA Requirement
+
+After opening the PR, the Linux Foundation EasyCLA bot reported that my commit was not authorized under a signed CLA.
+
+I completed the EasyCLA process by:
+
+```text
+1. Signing in with my GitHub account
+2. Creating / connecting a Linux Foundation ID
+3. Proceeding as an Individual Contributor
+4. Signing the Individual Contributor CLA
+5. Returning to the PR and confirming that EasyCLA turned green
+```
+
+This helped me learn that some large open-source foundations require a Contributor License Agreement before they can accept external contributions.
+
+### Current Status
+
+The PR is open and the CLA check is green.
+
+The PR is currently waiting for:
+
+```text
+1. Maintainer approval to run workflows
+2. CI results
+3. Reviewer feedback
+4. Final merge decision
+```
+
+This means the Docker caching part of the issue has been implemented in a PR, but the issue is not officially resolved yet. It will only be fully resolved if the maintainers approve the workflow run, CI passes, reviewers approve the change, and the PR gets merged.
 
 ### Current Cycle 2 Status
 
-The `vllm-omni` issue remains documented as an investigation attempt, but I am moving forward with the OpenTelemetry Weaver build-performance issue as the next active contribution candidate.
+The `vllm-omni` issue remains documented as an investigation attempt, but I moved forward with OpenTelemetry Weaver issue #791 as the active Cycle 2 contribution.
 
-The first Dynamo PR is now merged and remains my completed primary contribution, while the OpenTelemetry Weaver issue is now my active second-cycle target.
+The first Dynamo PR is merged and remains my completed primary contribution. The OpenTelemetry Weaver PR is now my active second contribution and is waiting for maintainer review and CI.
