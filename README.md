@@ -374,6 +374,8 @@ For my second open-source contribution cycle, I first selected a `vllm-omni` iss
 
 I then selected an OpenTelemetry Weaver issue related to CI build performance, commented on the issue, implemented a scoped Docker cache improvement, and opened a pull request.
 
+After that, I selected a TEAMMATES issue related to exposing shared backend query parameter keys to the frontend. I implemented a small frontend cleanup that replaces remaining hard-coded shared query parameter strings with existing `QueryParamKeys` constants. I opened a PR, fixed a lint formatting failure, and all required CI checks passed. The TEAMMATES PR is now waiting for maintainer review.
+
 ---
 
 ## Cycle 2 Attempt 1 — vllm-omni LongCat-AudioDiT Investigation
@@ -661,8 +663,285 @@ The PR is currently waiting for:
 
 This means the Docker caching part of the issue has been implemented in a PR, but the issue is not officially resolved yet. It will only be fully resolved if the maintainers approve the workflow run, CI passes, reviewers approve the change, and the PR gets merged.
 
-### Current Cycle 2 Status
+---
 
-The `vllm-omni` issue remains documented as an investigation attempt, but I moved forward with OpenTelemetry Weaver issue #791 as the active Cycle 2 contribution.
+## Cycle 2 Attempt 3 — TEAMMATES Query Param Constants
 
-The first Dynamo PR is merged and remains my completed primary contribution. The OpenTelemetry Weaver PR is now my active second contribution and is waiting for maintainer review and CI.
+### Repository
+
+- Upstream repository: https://github.com/TEAMMATES/teammates
+- My fork: https://github.com/aishwaryabandapelly-ai/teammates
+
+### Issue Selected
+
+- Issue: https://github.com/TEAMMATES/teammates/issues/14360
+- Title: Expose shared query param keys to the front-end
+
+### Pull Request Opened
+
+- PR: https://github.com/TEAMMATES/teammates/pull/14412
+- PR Title: `[#14360] Replace hard-coded query param keys`
+- Issue: https://github.com/TEAMMATES/teammates/issues/14360
+- Status: PR opened / signed commits verified / all CI checks passing / waiting for maintainer review
+
+### Why I Chose This Issue
+
+After opening the OpenTelemetry Weaver PR, I continued looking for another contribution opportunity that had a clearer code-change path and a strong chance of passing CI. I selected the TEAMMATES issue because it was labeled as a help-wanted issue, had a clear goal, and matched a repeated pattern already used in the repository.
+
+The issue asks contributors to expose shared query parameter keys to the frontend so the frontend does not rely on hard-coded backend query parameter strings. This was a good contribution candidate because the expected change was small, reviewable, and focused on consistency between backend constants and frontend usage.
+
+### Local Setup
+
+I forked the TEAMMATES repository, cloned the upstream repository locally, added my fork as `origin`, and created a feature branch from `upstream/master`.
+
+```bash
+cd ~/Desktop/project
+git clone https://github.com/TEAMMATES/teammates.git teammates
+cd teammates
+
+git remote rename origin upstream
+git remote add origin https://github.com/aishwaryabandapelly-ai/teammates.git
+
+git fetch upstream
+git checkout -b issue-14360-query-param-constants upstream/master
+```
+
+During setup, I accidentally created Git metadata in my home directory while an earlier clone command failed. I identified the issue using:
+
+```bash
+git rev-parse --show-toplevel
+git remote -v
+git status
+```
+
+After confirming that `/Users/aish` had accidentally become a Git repository pointing to TEAMMATES, I corrected the setup and re-cloned the repository properly under:
+
+```text
+/Users/aish/Desktop/project/teammates
+```
+
+This helped me learn to always verify `pwd`, `git status`, `git remote -v`, and `git rev-parse --show-toplevel` before making any open-source changes.
+
+### Investigation
+
+I found that TEAMMATES already had shared query parameter constants exposed in:
+
+```text
+src/web/types/api-const.ts
+```
+
+The relevant enum was:
+
+```ts
+export enum QueryParamKeys {
+  NEXT_URL = "nextUrl",
+  LOGIN_METHOD = "loginMethod",
+  COURSE_ID = "courseid",
+  COURSE_STATUS = "coursestatus",
+  NOTIFICATION_ID = "notificationid",
+  NOTIFICATION_TARGET_USER = "usertype",
+  NOTIFICATION_IS_FETCHING_ACTIVE = "isfetchingactive",
+  FEEDBACK_SESSION_ID = "fsid",
+  FEEDBACK_SESSION_START_TIME = "fsstarttime",
+  FEEDBACK_SESSION_END_TIME = "fsendtime",
+  FEEDBACK_SESSION_MODERATED_PERSON = "fsmoderatedperson",
+  FEEDBACK_SESSION_LOG_START_TIME = "fslstarttime",
+  FEEDBACK_SESSION_LOG_END_TIME = "fslendtime",
+  FEEDBACK_SESSION_LOG_TYPE = "fsltype",
+  QUERY_LOGS_STARTTIME = "qlstarttime",
+  QUERY_LOGS_ENDTIME = "qlendtime",
+  USER_ID = "userid",
+  ACCOUNT_ID = "accountid",
+  PREVIEWAS = "previewas",
+  IS_PREVIEW = "ispreview",
+  KEY = "key",
+  SEARCH_KEY = "searchkey",
+  LIMIT = "limit",
+}
+```
+
+I also found the backend-side enum in:
+
+```text
+src/main/java/teammates/ui/constants/QueryParamKeys.java
+```
+
+Then I searched the frontend and services for remaining hard-coded strings that already had matching values in `QueryParamKeys`.
+
+The remaining hard-coded shared query params found were:
+
+```text
+courseid
+key
+nextUrl
+accountid
+userid
+```
+
+I intentionally avoided unrelated Angular component or route keys such as:
+
+```text
+questionId
+section
+previewAs
+entityType
+```
+
+I also avoided keys such as:
+
+```text
+instituteid
+status
+```
+
+because they were not currently exposed in `QueryParamKeys` and adding new constants would make the PR larger than necessary.
+
+### Summary of Changes
+
+I replaced remaining hard-coded shared backend query parameter strings with existing `QueryParamKeys` constants across frontend component and service files.
+
+Files changed:
+
+```text
+src/web/app/pages-instructor/instructor-sessions-page/instructor-sessions-page.component.ts
+src/web/app/user-join-page.component.ts
+src/web/services/account.service.ts
+src/web/services/institute.service.ts
+src/web/services/instructor.service.ts
+src/web/services/log.service.ts
+src/web/services/student.service.ts
+```
+
+Specific replacements included:
+
+```text
+queryParams['courseid'] -> queryParams[QueryParamKeys.COURSE_ID]
+queryParams['key'] -> queryParams[QueryParamKeys.KEY]
+nextUrl -> QueryParamKeys.NEXT_URL in login redirect URLs
+paramMap['accountid'] -> paramMap[QueryParamKeys.ACCOUNT_ID]
+paramMap['userid'] -> paramMap[QueryParamKeys.USER_ID]
+paramsMap['courseid'] -> paramsMap[QueryParamKeys.COURSE_ID]
+```
+
+I also added `QueryParamKeys` imports where needed.
+
+### Commits
+
+I created signed commits on the branch:
+
+```text
+issue-14360-query-param-constants
+```
+
+Main commit:
+
+```text
+[#14360] Replace hard-coded query param keys
+```
+
+Lint formatting commit:
+
+```text
+[#14360] Fix lint formatting
+```
+
+Both commits were successfully verified by GitHub.
+
+### Testing and Verification
+
+Before opening the PR, I ran:
+
+```bash
+git diff --check
+```
+
+This passed with no whitespace errors.
+
+I also searched for remaining hard-coded shared query param strings in the changed frontend/service files. The remaining matches were unrelated Angular/component usages, such as:
+
+```text
+[key]="key"
+changes['key']
+```
+
+These were intentionally left unchanged because they are not backend query parameter strings.
+
+After opening the PR, one required CI check failed:
+
+```text
+Component Tests / lint
+```
+
+The failure was caused by a line-length / Prettier formatting issue after replacing `nextUrl` with `QueryParamKeys.NEXT_URL`. I fixed the formatting by wrapping the long `navigateByURL` call into the project’s multiline style:
+
+```ts
+this.navigationService.navigateByURL(
+  `/web/login?${QueryParamKeys.NEXT_URL}=${encodeURIComponent(nextUrl)}`,
+);
+```
+
+After pushing the lint formatting fix, all GitHub checks passed:
+
+```text
+9 successful checks
+```
+
+The passing checks included:
+
+```text
+Accessibility Tests / axe-tests
+API Type Definitions Check
+Build Developer Guide / Dev docs
+Component Tests / component-testing
+Component Tests / lint
+E2E Tests / E2E-tests
+Pull Request Checker / check-pr
+```
+
+### Current Status
+
+The TEAMMATES PR is open and all required checks have passed.
+
+The PR is currently waiting for:
+
+```text
+1. Maintainer review
+2. At least one approving review from a reviewer with write access
+3. Final merge decision
+```
+
+GitHub shows that merging is currently blocked only because review is required, not because of CI failure.
+
+### What I Learned From This Contribution
+
+This contribution helped me understand how to make a small consistency-focused PR in a large Angular/Java open-source project.
+
+I learned how to:
+
+- search for frontend usages of backend query parameter strings
+- distinguish actual backend query params from unrelated Angular route/component keys
+- keep a PR scoped by only using existing constants instead of adding new ones
+- verify changed files using `git diff --check`
+- read and respond to CI failures
+- fix lint formatting issues caused by line-length rules
+- push follow-up commits to an existing pull request branch
+- confirm that commits are signed and verified on GitHub
+- wait for maintainer review after all checks pass
+
+This was also a useful lesson in repository setup. I accidentally created Git metadata in the wrong directory during the first clone attempt and learned how to diagnose it safely using Git commands before making changes. That helped me avoid committing unrelated home-directory files.
+
+### Final Outcome So Far
+
+The TEAMMATES PR is open, signed, and CI-passing. It has not been merged yet because maintainer review is required, but from my side the implementation and CI validation are complete.
+
+---
+
+## Current Cycle 2 Status
+
+The `vllm-omni` issue remains documented as an investigation attempt because I chose not to open a duplicate PR after finding an existing active PR for the same LongCat-AudioDiT work.
+
+The OpenTelemetry Weaver PR is open and waiting for maintainer workflow approval, CI, and review.
+
+The TEAMMATES PR is open, signed, and all CI checks are passing. It is waiting for maintainer review and final merge decision.
+
+The first Dynamo PR is merged and remains my completed primary contribution. The OpenTelemetry Weaver and TEAMMATES PRs are active follow-up contributions for Cycle 2.
